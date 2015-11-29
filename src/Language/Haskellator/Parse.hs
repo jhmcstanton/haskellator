@@ -1,9 +1,13 @@
 {-# LANGUAGE GADTs, KindSignatures, DataKinds, TypeFamilies, 
              FlexibleInstances, TypeOperators, AllowAmbiguousTypes, 
-             UndecidableInstances, ScopedTypeVariables, FlexibleContexts #-}
+             UndecidableInstances, ScopedTypeVariables, FlexibleContexts, TemplateHaskell #-}
 
 module Language.Haskellator.Parse where
 
+import Language.Haskellator.Parse.Type
+import Language.Haskellator.Parse.TH
+
+import Language.Haskell.TH
 import Data.Binary
 import Data.Bits
 import Data.Proxy
@@ -11,12 +15,6 @@ import GHC.TypeLits
 import Data.Word
 
 
-class (KnownNat n) => FieldSize n where
-    type WordType n
-    data Width n
-    wordToWidth :: WordType n -> Width n
-    widthToWord :: Width n    -> WordType n  
- 
 
 parseField :: forall k n m. ((k + n) ~ m, FieldSize k, FieldSize n, FieldSize m, 
               Integral (WordType k), Integral (WordType n), Integral (WordType m), 
@@ -28,6 +26,11 @@ parseField c = (wordToWidth . fromIntegral . shiftR (widthToWord c) . fromIntegr
     kVal = natVal (Proxy :: Proxy m)
     nVal = natVal (Proxy :: Proxy n)
 
+type One = 1
+
+mkFSInstance ''One
+
+{-
 instance FieldSize 1 where
   type WordType 1        = Word8
   data Width 1           = Width1 !Word8 deriving (Eq, Show, Ord)
@@ -88,16 +91,4 @@ w = Width8 131
 
 w' :: (Width 3, Width 5)
 w' = parseField w
-
---instance (KnownNat n, n <= 8) => FieldSize n where
-  --type Width n = Word8 
-  
-{-instance (9 <= n, n <= 16) => FieldSize n where
-  type Width n = Word16
-
-instance (17 <= n, n <= 32) => FieldSize n where
-  type Width n = Word32
-
-instance (33 <= n, n <= 64) => FieldSize n where
-  type Width n = Word64
 -}
