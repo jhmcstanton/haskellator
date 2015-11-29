@@ -16,6 +16,7 @@ import Data.Word
 -- assumes no extra high bits in the left side of the word
 parseField :: forall k n m. ((k + n) ~ m, FieldSize k, FieldSize n, FieldSize m, 
               Integral (WordType k), Integral (WordType n), Integral (WordType m), 
+              1 <= m, 1 <= n, -- disallow parsing of empty instructions and ensure that at least 1 bit is parsed 
               Bits (WordType k), Bits (WordType n), Bits (WordType m)) =>
               Width m -> (Width n, Width k)
 parseField c = (wordToWidth . fromIntegral . (.&. leftMask) . shiftR (widthToWord c) $ kVal, 
@@ -25,6 +26,12 @@ parseField c = (wordToWidth . fromIntegral . (.&. leftMask) . shiftR (widthToWor
     kVal       = fromIntegral $ natVal (Proxy :: Proxy k)
     leftMask   = (2 ^ nVal) - 1
     rightMask  = (2 ^ kVal) - 1
+
+instance FieldSize 0 where 
+  type WordType 0  = Word8 -- ideally this would be (), but it doesn't play niceley with parseField
+  data Width 0     = Width0  deriving (Show, Eq, Ord)
+  wordToWidth _    = Width0
+  widthToWord _    = 0 
 
 instance FieldSize 1 where
   type WordType 1 = Word8
