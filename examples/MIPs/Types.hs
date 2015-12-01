@@ -1,6 +1,6 @@
 {-# LANGUAGE KindSignatures, GADTs #-}
 
-module MIPS.Type where
+module MIPS.Types where
 
 import Data.Word
 
