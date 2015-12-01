@@ -2,7 +2,6 @@
 
 module MIPS.Type where
 
-import Language.Haskellator.Parse
 import Data.Word
 
 data MInstruction :: * where
