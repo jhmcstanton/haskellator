@@ -1,25 +1,47 @@
-{-# LANGUAGE GADTs, KindSignatures, DataKinds, TypeFamilies, 
-             FlexibleInstances, TypeOperators, AllowAmbiguousTypes, 
-             UndecidableInstances, ScopedTypeVariables, FlexibleContexts, TemplateHaskell #-}
+{-# LANGUAGE DataKinds, TypeFamilies, 
+             FlexibleInstances, TypeOperators, 
+             ScopedTypeVariables, FlexibleContexts,
+             BangPatterns, RankNTypes #-}
 
 module Language.Haskellator.Parse where
 
 import Language.Haskellator.Parse.Type
 
-import Data.Binary
+import Data.Binary hiding (get, put)
 import Data.Bits
 import Data.Proxy
 import GHC.TypeLits
 import Data.Word
+import Control.Monad.State
+import Control.Monad.Reader
 
 
--- assumes no extra high bits in the left side of the word
+type Parser = forall w. (Num w, FiniteBits w) => ReaderT Int (State (w, Int)) w
+
+runParser :: (Num w, FiniteBits w) => Parser -> w -> (w, (w, Int))
+runParser parser instruction = runState (runReaderT parser (finiteBitSize instruction)) (instruction, 0)
+
+getField :: Int -> Parser
+getField width = do
+  (word, numUsed) <- get
+  size            <- ask
+  put (word .&. (2 ^ (size - (numUsed + width)) - 1), numUsed + width)
+  return $ (word .&. ((2 ^ width - 1) `shiftL` (size - numUsed - width))) `shiftR` (size - numUsed - width) 
+
+
+
+
+
+----------------------------------
+-- Neat Type stuff below
+----------------------------------
+
 parseField :: forall k n m. ((k + n) ~ m, FieldSize k, FieldSize n, FieldSize m, 
               Integral (WordType k), Integral (WordType n), Integral (WordType m), 
               1 <= m, 1 <= n, -- disallow parsing of empty instructions and ensure that at least 1 bit is parsed 
               Bits (WordType k), Bits (WordType n), Bits (WordType m)) =>
               Width m -> (Width n, Width k)
-parseField c = (wordToWidth . fromIntegral . (.&. leftMask) . shiftR (widthToWord c) $ kVal, 
+parseField c = (wordToWidth . fromIntegral . (.&. leftMask ) . shiftR (widthToWord c) $ kVal, 
                 wordToWidth . fromIntegral . (.&. rightMask) . widthToWord $ c) 
   where
     nVal       = natVal (Proxy :: Proxy n)
@@ -354,10 +376,11 @@ instance FieldSize 64 where
   wordToWidth = Width64
   widthToWord (Width64 n) = n
 
-
+{-
 w :: Width 8
 w = Width8 131
 
 w' :: (Width 3, Width 5)
 w' = parseField w
 
+-}
