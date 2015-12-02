@@ -16,17 +16,17 @@ import Control.Monad.State
 import Control.Monad.Reader
 
 
-type Parser = forall w. (Num w, FiniteBits w) => ReaderT Int (State (w, Int)) w
+type Parser w r = ReaderT Int (State (w, Int)) r
 
-runParser :: (Num w, FiniteBits w) => Parser -> w -> (w, (w, Int))
+runParser :: (Num w, FiniteBits w) => Parser w r -> w -> (r, (w, Int))
 runParser parser instruction = runState (runReaderT parser (finiteBitSize instruction)) (instruction, 0)
 
-getField :: Int -> Parser
+getField :: (Integral w, Integral r, FiniteBits w, FiniteBits r) => Int -> Parser w r 
 getField width = do
   (word, numUsed) <- get
   size            <- ask
   put (word .&. (2 ^ (size - (numUsed + width)) - 1), numUsed + width)
-  return $ (word .&. ((2 ^ width - 1) `shiftL` (size - numUsed - width))) `shiftR` (size - numUsed - width) 
+  return . fromIntegral $ (word .&. ((2 ^ width - 1) `shiftL` (size - numUsed - width))) `shiftR` (size - numUsed - width) 
 
 
 
