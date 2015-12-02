@@ -40,6 +40,15 @@ data Func :: * where -- all R-Type Functions emulated
   OR   :: Func
   deriving (Eq, Ord, Show, Enum)
 
+
+-- hopefully this is replaceable with toEnum later
+toOP :: Word8 -> OP
+toOP n | n == 0 = R_op
+       | n == 2 = J_op
+       | n == 3 = JAL 
+       | n == 4 = BEQ
+       | n == 5 = BNE
+
 -- hopefully this is easily replaceable with toEnum later
 toFunc :: Word8 -> Func 
 toFunc n | n == 0x20 = ADD --should probably check these..
