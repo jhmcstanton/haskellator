@@ -25,6 +25,7 @@ import           GHC.Prim (Proxy#, proxy#)
 
 import           Control.Monad.State
 
+import           Lens.Micro
 import           Lens.Micro.TH
 import           Lens.Micro.Mtl
 
@@ -38,25 +39,30 @@ makeLenses ''Machine
 
 type VM d r (pcRegNum :: Nat) = State (Machine d r pcRegNum)
 
+(<%) :: forall (m :: * -> *) s a b.
+              MonadState s m =>
+              ASetter s s a b -> m (a -> b) -> m ()
+l <% mf = do
+  -- (l %=) =<< mf
+  f <- mf
+  l %= f
+
+pcIx :: forall d r pcRegNum. KnownNat pcRegNum => VM d r pcRegNum Int
+pcIx = return . fromIntegral $ natVal' (proxy# :: Proxy# pcRegNum)
+
 -- PC operations --
 readPC :: forall d r pcRegNum. KnownNat pcRegNum => VM d r pcRegNum r
-readPC = memRead pcIx <$> gets _registerFile
-  where
-    pcIx = natVal' (proxy# :: Proxy# pcRegNum)
+readPC = memRead <$> pcIx <*> gets _registerFile
 
 incrPC :: forall d r pcRegNum.
           (Num r, KnownNat pcRegNum)
             => VM d r pcRegNum ()
-incrPC = registerFile %= memModify (+1) pcIx
-  where
-    pcIx = natVal' (proxy# :: Proxy# pcRegNum)
+incrPC = registerFile <% (memModify (+1) <$> pcIx)
 
 writePC :: forall d r pcRegNum.
          (Num r, KnownNat pcRegNum)
            => r -> VM d r pcRegNum ()
-writePC newPC = registerFile %= memWrite pcIx newPC
-  where
-    pcIx = natVal' (proxy# :: Proxy# pcRegNum)
+writePC newPC = registerFile <% (memWrite <$> pcIx <*> pure newPC)
 
 -- Data memory operations --
 readDM :: (Integral i, Show i) => i -> VM d r pcRegNum d
