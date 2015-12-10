@@ -12,7 +12,7 @@ import Data.Bits
 import Data.Proxy
 import GHC.TypeLits
 import Data.Word
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Control.Monad.Reader
 
 

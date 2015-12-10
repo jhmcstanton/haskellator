@@ -9,6 +9,7 @@ data MInstruction :: * where
   R :: Address -> Address -> Address -> Shamt -> Func -> MInstruction
   I :: OP -> Address      -> Address -> Immediate     -> MInstruction
   J :: OP -> JumpAddress  -> MInstruction
+  deriving (Show)
 
 
 data OP :: * where -- all MIPS opcodes emulated
@@ -38,6 +39,7 @@ data Func :: * where -- all R-Type Functions emulated
   MULT :: Func
   AND  :: Func
   OR   :: Func
+  BADPARSE :: Func
   deriving (Eq, Ord, Show, Enum)
 
 
@@ -53,8 +55,9 @@ toOP n | n == 0 = R_op
 toFunc :: Word8 -> Func 
 toFunc n | n == 0x20 = ADD --should probably check these..
          | n == 0x18 = MULT
-         | n == 0x88 = AND
-         | n == 0x89 = OR
+         | otherwise = BADPARSE 
+         -- | n == 0x88 = AND
+         -- | n == 0x89 = OR
 
 type InstrWidth  = Word32
 type Address     = Word8
